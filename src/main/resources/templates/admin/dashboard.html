@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Employee Management System - Admin Dashboard</title>
     <style>
         * {
@@ -345,6 +347,15 @@
     const contextPath = /*[[@{/}]]*/ '/';
     const API_BASE_URL = contextPath + 'api/admin';
 
+    // Get CSRF token from meta tags
+    function getCsrfToken() {
+        return document.querySelector('meta[name="_csrf"]').getAttribute('content');
+    }
+
+    function getCsrfHeader() {
+        return document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+    }
+
     let currentEmployeeId = null;
     let allEmployees = [];
 
@@ -503,11 +514,14 @@
                 url = `${API_BASE_URL}/add-employee`;
             }
 
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            headers[getCsrfHeader()] = getCsrfToken();
+
             const response = await fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
                 credentials: 'same-origin',
                 body: JSON.stringify(employeeData)
             });
@@ -534,8 +548,12 @@
         }
 
         try {
+            const headers = {};
+            headers[getCsrfHeader()] = getCsrfToken();
+
             const response = await fetch(`${API_BASE_URL}/delete-employee/${id}`, {
                 method: 'DELETE',
+                headers: headers,
                 credentials: 'same-origin'
             });
 

@@ -60,7 +60,7 @@ public class EmployeeService {
                 .orElseThrow(()-> new EntityNotFoundException("Employee not found with id: " + id));
 
         if(req.employeeId()  !=null && !req.employeeId().isBlank()) {
-            boolean idTaken = employeeRepository.existsByEmployeeIdIgnoreCase(existing.getEmployeeId());
+            boolean idTaken = employeeRepository.existsByEmployeeIdIgnoreCase(req.employeeId());
             boolean sameAsCurrent = req.employeeId().equalsIgnoreCase(existing.getEmployeeId());
             if(idTaken && !sameAsCurrent) {
                 throw new IllegalArgumentException("Employee already exists or you entered the previous ID.");
