@@ -217,22 +217,48 @@
 
         .stat-card {
             flex: 1;
-            min-width: 200px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 8px;
+            min-width: 250px;
+            padding: 25px;
+            border-radius: 10px;
             color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-card.salary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-card.age {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-card.total {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 
         .stat-card h3 {
             font-size: 14px;
             margin-bottom: 10px;
             opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .stat-card .stat-value {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
         }
 
         @media (max-width: 768px) {
@@ -260,6 +286,10 @@
             th, td {
                 padding: 8px;
             }
+
+            .stat-card .stat-value {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
@@ -273,13 +303,37 @@
 
     <div class="success-message" id="successMessage"></div>
 
+    <!-- Statistics Dashboard -->
+    <div class="stats-container">
+        <div class="stat-card total">
+            <h3>Total Employees</h3>
+            <div class="stat-value" id="totalEmployees">0</div>
+            <div class="stat-label">Active in system</div>
+        </div>
+        <div class="stat-card salary">
+            <h3>Average Salary</h3>
+            <div class="stat-value" id="avgSalary">$0.00</div>
+            <div class="stat-label">Across all employees</div>
+        </div>
+        <div class="stat-card age">
+            <h3>Average Age</h3>
+            <div class="stat-value" id="avgAge">0</div>
+            <div class="stat-label">Years old</div>
+        </div>
+    </div>
+
     <div class="header">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search by name, employee ID, or department...">
             <button onclick="searchEmployees()">Search</button>
             <button class="btn-secondary" onclick="resetSearch()">Reset</button>
         </div>
-        <button class="btn-success" onclick="openAddModal()">+ Add Employee</button>
+        <div style="display: flex; gap: 10px;">
+            <a href="/admin/reports" style="text-decoration: none;">
+                <button type="button" class="btn-secondary">📊 Reports</button>
+            </a>
+            <button class="btn-success" onclick="openAddModal()">+ Add Employee</button>
+        </div>
     </div>
 
     <div id="loadingMessage" class="loading" style="display: none;">Loading employees...</div>
@@ -290,6 +344,7 @@
             <th>Employee ID</th>
             <th>Name</th>
             <th>Date of Birth</th>
+            <th>Age</th>
             <th>Department</th>
             <th>Salary</th>
             <th>Actions</th>
@@ -362,7 +417,36 @@
     // Load employees on page load
     window.onload = function() {
         loadEmployees();
+        loadStatistics();
     };
+
+    // Load statistics
+    async function loadStatistics() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/statistics`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load statistics');
+            }
+
+            const stats = await response.json();
+            document.getElementById('totalEmployees').textContent = stats.totalEmployees || 0;
+            document.getElementById('avgSalary').textContent = stats.averageSalary
+                ? `$${parseFloat(stats.averageSalary).toFixed(2)}`
+                : '$0.00';
+            document.getElementById('avgAge').textContent = stats.averageAge
+                ? Math.round(stats.averageAge)
+                : 0;
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+        }
+    }
 
     // Load all employees
     async function loadEmployees() {
@@ -400,7 +484,7 @@
         tbody.innerHTML = '';
 
         if (employees.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No employees found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No employees found</td></tr>';
             return;
         }
 
@@ -410,6 +494,7 @@
                     <td>${escapeHtml(employee.employeeCode || 'N/A')}</td>
                     <td>${escapeHtml(employee.name || 'N/A')}</td>
                     <td>${escapeHtml(employee.dateOfBirth || 'N/A')}</td>
+                    <td>${employee.age || 'N/A'}</td>
                     <td>${escapeHtml(employee.department || 'N/A')}</td>
                     <td>$${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
                     <td>
@@ -430,28 +515,43 @@
         return div.innerHTML;
     }
 
-    // Search employees
-    function searchEmployees() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    // Search employees using backend
+    async function searchEmployees() {
+        const searchTerm = document.getElementById('searchInput').value.trim();
 
         if (!searchTerm) {
-            displayEmployees(allEmployees);
+            loadEmployees();
             return;
         }
 
-        const filtered = allEmployees.filter(emp => {
-            return (emp.name && emp.name.toLowerCase().includes(searchTerm)) ||
-                (emp.employeeCode && emp.employeeCode.toLowerCase().includes(searchTerm)) ||
-                (emp.department && emp.department.toLowerCase().includes(searchTerm));
-        });
+        try {
+            showLoading(true);
+            const response = await fetch(`${API_BASE_URL}/search?keyword=${encodeURIComponent(searchTerm)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            });
 
-        displayEmployees(filtered);
+            if (!response.ok) {
+                throw new Error('Failed to search employees');
+            }
+
+            const results = await response.json();
+            displayEmployees(results);
+            showLoading(false);
+        } catch (error) {
+            console.error('Error searching employees:', error);
+            alert('Error searching employees: ' + error.message);
+            showLoading(false);
+        }
     }
 
     // Reset search
     function resetSearch() {
         document.getElementById('searchInput').value = '';
-        displayEmployees(allEmployees);
+        loadEmployees();
     }
 
     // Open add modal
@@ -535,6 +635,7 @@
             closeModal();
             showSuccessMessage(currentEmployeeId ? 'Employee updated successfully!' : 'Employee added successfully!');
             loadEmployees();
+            loadStatistics(); // Refresh statistics
         } catch (error) {
             console.error('Error saving employee:', error);
             document.getElementById('employeeIdError').innerText = error.message;
@@ -564,6 +665,7 @@
 
             showSuccessMessage('Employee deleted successfully!');
             loadEmployees();
+            loadStatistics(); // Refresh statistics
         } catch (error) {
             console.error('Error deleting employee:', error);
             alert('Error deleting employee: ' + error.message);

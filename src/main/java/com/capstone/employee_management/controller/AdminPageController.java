@@ -27,5 +27,10 @@ public class AdminPageController {
         return employeeService.findAll();
     }
 
+    @GetMapping("/admin/reports")
+    public String reportsPage() {
+        return "admin/reports";
+    }
+
 
 }

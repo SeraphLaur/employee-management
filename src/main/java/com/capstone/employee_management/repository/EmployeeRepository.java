@@ -29,12 +29,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     BigDecimal findAveSalary();
 
     //find average of the age of all the employees
-    @Query(value = "SELECT AVG(TIMESTAMPDIFF(YEAR, e.date_of_birth, CURRENT_DATE)) FROM employee e", nativeQuery = true)
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(YEAR, e.date_of_birth, CURRENT_DATE)) " +
+            "FROM employee e", nativeQuery = true)
     Double findAveAge();
 
     //display list of employees between the parameter of minAge and maxAge
-    @Query(value = "SELECT * FROM employee e WHERE TIMESTAMPDIFF(YEAR , e.date_of_birth, CURRENT_DATE) BETWEEN :minAge AND :maxAge",
-    countQuery= "SELECT COUNT(*) FROM employee e WHERE TIMESTAMPDIFF(YEAR , e.date_of_birth, CURRENT_DATE) BETWEEN :minAge and :maxAge",
+    @Query(value = "SELECT * FROM employee e " +
+                    "WHERE TIMESTAMPDIFF(YEAR , e.date_of_birth, CURRENT_DATE) " +
+                    "BETWEEN :minAge AND :maxAge",
+    countQuery= "SELECT COUNT(*) FROM employee e " +
+                    "WHERE TIMESTAMPDIFF(YEAR , e.date_of_birth, CURRENT_DATE) " +
+                    "BETWEEN :minAge and :maxAge",
     nativeQuery = true)
     Page<Employee> findAgeBetween(@Param("minAge") int minAge, @Param("maxAge") int maxAge, Pageable pageable);
 

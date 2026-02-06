@@ -37,7 +37,7 @@ public class DepartmentService {
 
 
     public Department getOrCreateByName(String name) {
-        return departmentRepository.findByNameContainingIgnoreCase(name)
+        return departmentRepository.findByNameIgnoreCase(name)
                 .orElseGet(() -> departmentRepository.save(new Department()));
 
     }

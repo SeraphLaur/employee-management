@@ -12,5 +12,5 @@ public record EmployeeResponseDto(
         LocalDate dateOfBirth,
         String department,
         BigDecimal salary,
-        int age
+        Integer age
 ) {}

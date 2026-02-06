@@ -3,14 +3,18 @@ package com.capstone.employee_management.service;
 import com.capstone.employee_management.dto.EmployeeMapper;
 import com.capstone.employee_management.dto.EmployeeRequestDto;
 import com.capstone.employee_management.dto.EmployeeResponseDto;
+import com.capstone.employee_management.dto.StatisticsResponseDto;
 import com.capstone.employee_management.model.Department;
 import com.capstone.employee_management.model.Employee;
 import com.capstone.employee_management.repository.DepartmentRepository;
 import com.capstone.employee_management.repository.EmployeeRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 
@@ -35,22 +39,42 @@ public class EmployeeService {
 
     }
 
-    public EmployeeResponseDto findById(Long id) {
-        Employee e = employeeRepository.findById(id)
-                .orElseThrow(()-> new EntityNotFoundException("Employee not found with id: " + id));
-    return employeeMapper.toResponse(e);
+    @Transactional(readOnly = true)
+    public List<EmployeeResponseDto> searchEmployees(String keyword) {
+        return employeeRepository.searchEmployees(keyword).stream()
+                .map(employeeMapper::toResponse)
+                .toList();
     }
+
+//    public EmployeeResponseDto findById(Long id) {
+//        Employee e = employeeRepository.findById(id)
+//                .orElseThrow(()-> new EntityNotFoundException("Employee not found with id: " + id));
+//    return employeeMapper.toResponse(e);
+//    }
 
 
     public EmployeeResponseDto createEmployee(EmployeeRequestDto req) {
         if(req.employeeId()  !=null && !req.employeeId().isBlank() &&
                 employeeRepository.existsByEmployeeIdIgnoreCase(req.employeeId())) {
-        throw new EntityNotFoundException("Employee already exists with id: " + req.employeeId());
+        throw new IllegalArgumentException("Employee already exists with id: " + req.employeeId());
         }
 
-        Department dept = findDepartmentByName(req.departmentName()) ;
-        Employee saved = employeeRepository.save(employeeMapper.toEntity(req, dept));
-        return employeeMapper.toResponse(saved);
+
+        boolean exists = departmentRepository.existsByNameIgnoreCase(req.departmentName()) ;
+
+        if(exists) {
+            Department dept = findDepartmentByName(req.departmentName()) ;
+            Employee saved = employeeRepository.save(employeeMapper.toEntity(req, dept));
+            return employeeMapper.toResponse(saved);
+        }
+
+        Department newDepartment = new Department();
+        newDepartment.setName(req.departmentName());
+        departmentRepository.save(newDepartment);
+
+        return employeeMapper.toResponse(employeeRepository.save(employeeMapper.toEntity(req, newDepartment)));
+
+
 
 
     }
@@ -67,10 +91,23 @@ public class EmployeeService {
 
             }
         }
-        Department dept = findDepartmentByName(req.departmentName());
-        employeeMapper.updateEntity(existing, req, dept);
-        Employee updated = employeeRepository.save(existing);
-        return employeeMapper.toResponse(updated);
+
+        boolean exists = departmentRepository.existsByNameIgnoreCase(req.departmentName()) ;
+
+        if(exists) {
+            Department dept = findDepartmentByName(req.departmentName());
+            employeeMapper.updateEntity(existing, req, dept);
+            return employeeMapper.toResponse(employeeRepository.save(existing));
+        }
+
+        Department newDepartment = new Department();
+        newDepartment.setName(req.departmentName());
+        departmentRepository.save(newDepartment);
+
+        employeeMapper.updateEntity(existing, req, newDepartment);
+
+        return employeeMapper.toResponse(employeeRepository.save(existing));
+
 
     }
 
@@ -82,8 +119,34 @@ public class EmployeeService {
     }
 
     private Department findDepartmentByName(String name) {
-        return departmentRepository.findByNameContainingIgnoreCase(name)
+        return departmentRepository.findByNameIgnoreCase(name)
                 .orElseThrow(()-> new EntityNotFoundException("Department not found with name: " + name));
 
     }
+
+    @Transactional(readOnly = true)
+    public StatisticsResponseDto getStatistics() {
+        long totalEmployees = employeeRepository.count();
+        BigDecimal averageSalary = employeeRepository.findAveSalary();
+        Double averageAge = employeeRepository.findAveAge();
+
+        return new StatisticsResponseDto(
+                totalEmployees,
+                averageSalary != null ? averageSalary : BigDecimal.ZERO,
+                averageAge != null ? averageAge : 0.0
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmployeeResponseDto> findByDepartment(String departmentName, Pageable pageable) {
+        return employeeRepository.findByDepartment_NameIgnoreCase(departmentName, pageable)
+                .map(employeeMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmployeeResponseDto> findByAgeRange(int minAge, int maxAge, Pageable pageable) {
+        return employeeRepository.findAgeBetween(minAge, maxAge, pageable)
+                .map(employeeMapper::toResponse);
+    }
 }
+
