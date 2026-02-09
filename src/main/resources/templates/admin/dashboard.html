@@ -615,7 +615,7 @@
         </div>
         <div class="stat-card">
             <div class="stat-label">Average Salary</div>
-            <div class="stat-value" id="avgSalary">$0.00</div>
+            <div class="stat-value" id="avgSalary">₱0.00</div>
             <div class="stat-description">Across all employees</div>
         </div>
         <div class="stat-card">
@@ -766,8 +766,8 @@
             const stats = await response.json();
             document.getElementById('totalEmployees').textContent = stats.totalEmployees || 0;
             document.getElementById('avgSalary').textContent = stats.averageSalary
-                ? `$${parseFloat(stats.averageSalary).toFixed(2)}`
-                : '$0.00';
+                ? `₱${parseFloat(stats.averageSalary).toFixed(2)}`
+                : '₱0.00';
             document.getElementById('avgAge').textContent = stats.averageAge
                 ? Math.round(stats.averageAge)
                 : 0;
@@ -822,7 +822,7 @@
                 <td>${escapeHtml(employee.dateOfBirth || 'N/A')}</td>
                 <td>${employee.age || 'N/A'}</td>
                 <td>${escapeHtml(employee.department || 'N/A')}</td>
-                <td>$${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
+                <td>₱${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
                 <td>
                     <div class="table-actions">
                         <button class="btn btn-sm btn-secondary" onclick="openEditModal(${employee.id})">Edit</button>

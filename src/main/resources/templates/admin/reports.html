@@ -189,6 +189,33 @@
             box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
         }
 
+        .filter-options {
+            margin-bottom: 1rem;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
         .filter-actions {
             display: flex;
             gap: 0.75rem;
@@ -517,7 +544,7 @@
 <!-- Main Container -->
 <div class="container">
     <div class="page-title">Reports</div>
-    <div class="page-subtitle">Generate and view employee reports by department or age range</div>
+    <div class="page-subtitle">Generate and view employee reports by department or age</div>
 
     <!-- Filter Cards -->
     <div class="filter-grid">
@@ -539,16 +566,41 @@
         <!-- Age Filter -->
         <div class="filter-card">
             <div class="filter-title">
-                Filter by Age Range
+                Filter by Age
             </div>
-            <div class="form-group">
-                <label class="form-label" for="minAge">Minimum Age</label>
-                <input type="number" class="form-control" id="minAge" min="18" max="100" placeholder="e.g., 25">
+            <div class="filter-options">
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="ageExact" name="ageFilter" value="exact" checked>
+                        <label for="ageExact">Exact Age</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="ageRange" name="ageFilter" value="range">
+                        <label for="ageRange">Age Range</label>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="maxAge">Maximum Age</label>
-                <input type="number" class="form-control" id="maxAge" min="18" max="100" placeholder="e.g., 40">
+
+            <!-- Exact Age Input -->
+            <div id="exactAgeInput">
+                <div class="form-group">
+                    <label class="form-label" for="exactAge">Age</label>
+                    <input type="number" class="form-control" id="exactAge" min="18" max="100" placeholder="e.g., 30">
+                </div>
             </div>
+
+            <!-- Age Range Inputs -->
+            <div id="ageRangeInputs" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" for="minAge">Minimum Age</label>
+                    <input type="number" class="form-control" id="minAge" min="18" max="100" placeholder="e.g., 25">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="maxAge">Maximum Age</label>
+                    <input type="number" class="form-control" id="maxAge" min="18" max="100" placeholder="e.g., 40">
+                </div>
+            </div>
+
             <div class="filter-actions">
                 <button class="btn btn-primary" onclick="filterByAge()">Generate Report</button>
                 <button class="btn btn-secondary" onclick="clearAgeFilter()">Clear</button>
@@ -614,6 +666,22 @@
     let totalPages = 0;
     let currentFilter = null;
 
+    // Toggle between exact age and age range inputs
+    document.querySelectorAll('input[name="ageFilter"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const exactAgeInput = document.getElementById('exactAgeInput');
+            const ageRangeInputs = document.getElementById('ageRangeInputs');
+
+            if (this.value === 'exact') {
+                exactAgeInput.style.display = 'block';
+                ageRangeInputs.style.display = 'none';
+            } else {
+                exactAgeInput.style.display = 'none';
+                ageRangeInputs.style.display = 'block';
+            }
+        });
+    });
+
     // Toast Notifications
     function showToast(message, type = 'success') {
         const container = document.getElementById('toastContainer');
@@ -654,20 +722,49 @@
 
     // Filter by Age
     async function filterByAge() {
-        const minAge = parseInt(document.getElementById('minAge').value);
-        const maxAge = parseInt(document.getElementById('maxAge').value);
+        const filterType = document.querySelector('input[name="ageFilter"]:checked').value;
 
-        if (!minAge || !maxAge) {
-            showToast('Please enter both minimum and maximum age', 'error');
-            return;
+        if (filterType === 'exact') {
+            const age = parseInt(document.getElementById('exactAge').value);
+
+            if (!age) {
+                showToast('Please enter an age', 'error');
+                return;
+            }
+
+            if (age < 0) {
+                showToast('Age cannot be negative', 'error');
+                return;
+            }
+
+            currentFilter = { type: 'age-exact', age };
+        } else {
+            const minAge = parseInt(document.getElementById('minAge').value);
+            const maxAge = parseInt(document.getElementById('maxAge').value);
+
+            if (!minAge && !maxAge) {
+                showToast('Please enter at least minimum or maximum age', 'error');
+                return;
+            }
+
+            if (minAge && minAge < 0) {
+                showToast('Minimum age cannot be negative', 'error');
+                return;
+            }
+
+            if (maxAge && maxAge < 0) {
+                showToast('Maximum age cannot be negative', 'error');
+                return;
+            }
+
+            if (minAge && maxAge && minAge > maxAge) {
+                showToast('Minimum age cannot be greater than maximum age', 'error');
+                return;
+            }
+
+            currentFilter = { type: 'age-range', minAge, maxAge };
         }
 
-        if (minAge > maxAge) {
-            showToast('Minimum age cannot be greater than maximum age', 'error');
-            return;
-        }
-
-        currentFilter = { type: 'age', minAge, maxAge };
         currentPage = 0;
         await loadReport();
     }
@@ -682,8 +779,19 @@
 
             if (currentFilter.type === 'department') {
                 url = `${API_BASE_URL}/by-department?departmentName=${encodeURIComponent(currentFilter.value)}&page=${currentPage}&size=10`;
-            } else if (currentFilter.type === 'age') {
-                url = `${API_BASE_URL}/by-age?minAge=${currentFilter.minAge}&maxAge=${currentFilter.maxAge}&page=${currentPage}&size=10`;
+            } else if (currentFilter.type === 'age-exact') {
+                url = `${API_BASE_URL}/by-age?age=${currentFilter.age}&page=${currentPage}&size=10`;
+            } else if (currentFilter.type === 'age-range') {
+                const params = new URLSearchParams();
+                if (currentFilter.minAge !== undefined && currentFilter.minAge !== null && !isNaN(currentFilter.minAge)) {
+                    params.append('minAge', currentFilter.minAge);
+                }
+                if (currentFilter.maxAge !== undefined && currentFilter.maxAge !== null && !isNaN(currentFilter.maxAge)) {
+                    params.append('maxAge', currentFilter.maxAge);
+                }
+                params.append('page', currentPage);
+                params.append('size', 10);
+                url = `${API_BASE_URL}/by-age?${params.toString()}`;
             }
 
             const response = await fetch(url, {
@@ -699,7 +807,8 @@
                     window.location.href = contextPath + 'login';
                     return;
                 }
-                throw new Error('Failed to load report');
+                const errorData = await response.json().catch(() => ({ message: 'Failed to load report' }));
+                throw new Error(errorData.message || 'Failed to load report');
             }
 
             const data = await response.json();
@@ -743,8 +852,18 @@
         let filterText = '';
         if (currentFilter.type === 'department') {
             filterText = `Department: <span class="filter-badge">${escapeHtml(currentFilter.value)}</span>`;
-        } else {
-            filterText = `Age Range: <span class="filter-badge">${currentFilter.minAge} - ${currentFilter.maxAge} years</span>`;
+        } else if (currentFilter.type === 'age-exact') {
+            filterText = `Age: <span class="filter-badge">${currentFilter.age} years</span>`;
+        } else if (currentFilter.type === 'age-range') {
+            let ageText = '';
+            if (currentFilter.minAge && currentFilter.maxAge) {
+                ageText = `${currentFilter.minAge} - ${currentFilter.maxAge} years`;
+            } else if (currentFilter.minAge) {
+                ageText = `${currentFilter.minAge}+ years`;
+            } else if (currentFilter.maxAge) {
+                ageText = `Up to ${currentFilter.maxAge} years`;
+            }
+            filterText = `Age Range: <span class="filter-badge">${ageText}</span>`;
         }
         resultsInfo.innerHTML = `${filterText} | Total: <strong>${currentResults.length}</strong> employees`;
 
@@ -756,7 +875,7 @@
                 <td>${escapeHtml(employee.dateOfBirth || 'N/A')}</td>
                 <td>${employee.age || 'N/A'}</td>
                 <td>${escapeHtml(employee.department || 'N/A')}</td>
-                <td>$${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
+                <td>₱${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -803,8 +922,12 @@
     }
 
     function clearAgeFilter() {
+        document.getElementById('exactAge').value = '';
         document.getElementById('minAge').value = '';
         document.getElementById('maxAge').value = '';
+        document.getElementById('ageExact').checked = true;
+        document.getElementById('exactAgeInput').style.display = 'block';
+        document.getElementById('ageRangeInputs').style.display = 'none';
         clearResults();
         showToast('Age filter cleared');
     }
@@ -838,6 +961,12 @@
     document.getElementById('departmentName').addEventListener('keypress', function(event) {
         if (event.key === 'Enter') {
             filterByDepartment();
+        }
+    });
+
+    document.getElementById('exactAge').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            filterByAge();
         }
     });
 

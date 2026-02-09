@@ -3,8 +3,8 @@ package com.capstone.employee_management.controller;
 import com.capstone.employee_management.dto.EmployeeRequestDto;
 import com.capstone.employee_management.dto.EmployeeResponseDto;
 import com.capstone.employee_management.dto.StatisticsResponseDto;
-import com.capstone.employee_management.model.Employee;
 import com.capstone.employee_management.service.EmployeeService;
+import com.capstone.employee_management.service.EmployeeTransactionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -62,12 +62,24 @@ class AdminEmployeeController {
 
     @GetMapping("/by-age")
     public Page<EmployeeResponseDto> getEmployeesByAge(
-            @RequestParam int minAge,
-            @RequestParam int maxAge,
+            @RequestParam(required = false) Integer age,
+            @RequestParam(required = false) Integer minAge,
+            @RequestParam(required = false) Integer maxAge,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.findByAgeRange(minAge, maxAge, pageable);
+
+        if(age != null) {
+            if(age < 0) {
+                throw new IllegalArgumentException("Age cannot be negative");
+            }
+            return employeeService.findByAge(age, pageable);
+        }
+        else if(minAge != null || maxAge != null) {
+            return employeeService.findByAge(minAge, maxAge, pageable);
+        }
+
+        throw new IllegalArgumentException("Please provide an age.");
     }
 
 }
