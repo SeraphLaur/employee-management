@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
@@ -26,11 +27,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Very basic unit tests for EmployeeManagementService.
- * - Pure unit tests (no Spring context).
- * - Minimal happy paths + key error cases.
- */
+
 @ExtendWith(MockitoExtension.class)
 class EmployeeManagementServiceTest {
 
@@ -118,17 +115,22 @@ class EmployeeManagementServiceTest {
         Employee e1 = emp(10L, "E001", "Alice", LocalDate.of(1990, 1, 1), d, new BigDecimal("1000"));
         Employee e2 = emp(11L, "E002", "Bob",   LocalDate.of(1991, 2, 2), d, new BigDecimal("2000"));
 
-        when(employeeRepository.findAll()).thenReturn(List.of(e1, e2));
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Employee> employeePage = new PageImpl<>(List.of(e1, e2), pageable, 2);
+
+        when(employeeRepository.findAll(pageable)).thenReturn(employeePage);
         when(employeeMapper.toResponse(e1))
                 .thenReturn(resp(10L, "E001", "Alice", e1.getDateOfBirth(), "IT", e1.getSalary(), 34));
         when(employeeMapper.toResponse(e2))
                 .thenReturn(resp(11L, "E002", "Bob",   e2.getDateOfBirth(), "IT", e2.getSalary(), 33));
 
-        var results = service.findAll();
+        Page<EmployeeResponseDto> results = service.findAll(pageable);
 
-        assertEquals(2, results.size());
-        assertEquals("E001", results.get(0).employeeCode());
-        verify(employeeRepository).findAll();
+        assertEquals(2, results.getContent().size());
+        assertEquals(2, results.getTotalElements());
+        assertEquals("E001", results.getContent().get(0).employeeCode());
+        assertEquals("E002", results.getContent().get(1).employeeCode());
+        verify(employeeRepository).findAll(pageable);
         verify(employeeMapper, times(2)).toResponse(any(Employee.class));
     }
 
@@ -137,15 +139,19 @@ class EmployeeManagementServiceTest {
         Department d = dept(2L, "HR");
         Employee e = emp(20L, "E010", "Carla", LocalDate.of(1988, 5, 5), d, new BigDecimal("3000"));
 
-        when(employeeRepository.searchEmployees("car")).thenReturn(List.of(e));
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Employee> employeePage = new PageImpl<>(List.of(e), pageable, 1);
+
+        when(employeeRepository.searchEmployees("car", pageable)).thenReturn(employeePage);
         when(employeeMapper.toResponse(e))
                 .thenReturn(resp(20L, "E010", "Carla", e.getDateOfBirth(), "HR", e.getSalary(), 37));
 
-        var results = service.searchEmployees("car");
+        Page<EmployeeResponseDto> results = service.searchEmployees("car", pageable);
 
-        assertEquals(1, results.size());
-        assertEquals("E010", results.get(0).employeeCode());
-        verify(employeeRepository).searchEmployees("car");
+        assertEquals(1, results.getContent().size());
+        assertEquals(1, results.getTotalElements());
+        assertEquals("E010", results.getContent().get(0).employeeCode());
+        verify(employeeRepository).searchEmployees("car", pageable);
         verify(employeeMapper).toResponse(e);
     }
 
@@ -227,6 +233,7 @@ class EmployeeManagementServiceTest {
         var mapped = resp(100L, "E100", "Grace V2", request.dateOfBirth(), "IT", request.salary(), 37);
 
         when(employeeRepository.findById(100L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.existsByEmployeeIdIgnoreCase("E100")).thenReturn(true);
         when(departmentRepository.existsByNameIgnoreCase("IT")).thenReturn(true);
         when(departmentRepository.findByNameIgnoreCase("IT")).thenReturn(Optional.of(existingDept));
         // updateEntity mutates 'existing'
@@ -239,10 +246,42 @@ class EmployeeManagementServiceTest {
         assertEquals(100L, result.id());
         assertEquals("Grace V2", result.name());
         verify(employeeRepository).findById(100L);
+        verify(employeeRepository).existsByEmployeeIdIgnoreCase("E100");
         verify(departmentRepository).existsByNameIgnoreCase("IT");
         verify(employeeMapper).updateEntity(existing, request, existingDept);
         verify(employeeRepository).save(existing);
         verify(employeeMapper).toResponse(existing);
+    }
+
+    @Test
+    void updateEmployee_changingEmployeeId_newIdAlreadyExists_throws() {
+        var existingDept = dept(1L, "IT");
+        var existing = emp(100L, "E100", "Grace", LocalDate.of(1988, 12, 12), existingDept, new BigDecimal("120000"));
+        var request = req("E999", "Grace V2", LocalDate.of(1988, 12, 12), "IT", new BigDecimal("120000"));
+
+        when(employeeRepository.findById(100L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.existsByEmployeeIdIgnoreCase("E999")).thenReturn(true);
+
+        var ex = assertThrows(IllegalArgumentException.class, () -> service.updateEmployee(100L, request));
+
+        assertTrue(ex.getMessage().toLowerCase().contains("already exists") ||
+                ex.getMessage().toLowerCase().contains("previous id"));
+        verify(employeeRepository).findById(100L);
+        verify(employeeRepository).existsByEmployeeIdIgnoreCase("E999");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateEmployee_employeeNotFound_throws() {
+        var request = req("E100", "Grace", LocalDate.of(1988, 12, 12), "IT", new BigDecimal("120000"));
+
+        when(employeeRepository.findById(999L)).thenReturn(Optional.empty());
+
+        var ex = assertThrows(EntityNotFoundException.class, () -> service.updateEmployee(999L, request));
+
+        assertTrue(ex.getMessage().contains("999"));
+        verify(employeeRepository).findById(999L);
+        verify(employeeRepository, never()).save(any());
     }
 
     @Test

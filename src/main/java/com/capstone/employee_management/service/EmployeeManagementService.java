@@ -33,19 +33,17 @@ public abstract class EmployeeManagementService implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeeResponseDto> findAll() {
-        return employeeRepository.findAll().stream()
-                .map(employeeMapper::toResponse)
-                .toList();
+    public Page<EmployeeResponseDto> findAll(Pageable pageable) {
+        return employeeRepository.findAll(pageable)
+                .map(employeeMapper::toResponse);
 
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeeResponseDto> searchEmployees(String keyword) {
-        return employeeRepository.searchEmployees(keyword).stream()
-                .map(employeeMapper::toResponse)
-                .toList();
+    public Page<EmployeeResponseDto> searchEmployees(String keyword, Pageable pageable) {
+        return employeeRepository.searchEmployees(keyword, pageable)
+                .map(employeeMapper::toResponse);
     }
 
     @Override

@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.PastOrPresent;
 
 import java.time.LocalDate;
 
@@ -13,7 +14,7 @@ public abstract class Person {
     @NotBlank
     protected String name;
 
-    @Past
+    @PastOrPresent
     @Column(name = "date_of_birth", nullable = false)
     protected LocalDate dateOfBirth;
 

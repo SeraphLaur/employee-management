@@ -1,5 +1,7 @@
 package com.capstone.employee_management.repository;
 
+import com.capstone.employee_management.dto.EmployeeResponseDto;
+import com.capstone.employee_management.model.Department;
 import com.capstone.employee_management.model.Employee;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+
     boolean existsByEmployeeIdIgnoreCase(String employeeId);
 
     //display a list of employees based on their department
@@ -22,7 +25,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(e.employeeId) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(e.department.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<Employee> searchEmployees(@Param("keyword") String keyword);
+    Page<Employee> searchEmployees(@Param("keyword") String keyword, Pageable pageable);
 
     //find average of the salary of all employees
     @Query(value = "SELECT AVG(e.salary) from employee e", nativeQuery = true)

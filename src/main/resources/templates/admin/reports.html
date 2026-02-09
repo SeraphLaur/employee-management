@@ -239,13 +239,18 @@
             justify-content: center;
         }
 
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.15);
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
             box-shadow: var(--shadow-md);
             transform: translateY(-1px);
@@ -257,7 +262,7 @@
             border: 2px solid var(--border);
         }
 
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background-color: var(--bg-light);
             border-color: var(--border-dark);
         }
@@ -353,27 +358,54 @@
         }
 
         /* Pagination */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            background-color: var(--bg-light);
+            border-top: 2px solid var(--border);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
         .pagination {
             display: flex;
-            justify-content: center;
+            gap: 0.5rem;
             align-items: center;
-            gap: 1rem;
-            margin-top: 1.5rem;
         }
 
-        .pagination button {
-            padding: 0.5rem 1rem;
+        .page-btn {
+            padding: 0.5rem 0.75rem;
+            min-width: 40px;
+            height: 40px;
+            border: 2px solid var(--border);
+            background: var(--bg-white);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
         }
 
-        .pagination button:disabled {
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background-color: var(--bg-light);
+        }
+
+        .page-btn.active {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .page-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        .page-info {
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
         }
 
         /* Loading State */
@@ -519,6 +551,16 @@
             .toast {
                 min-width: auto;
             }
+
+            .pagination-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -647,10 +689,9 @@
             </div>
 
             <!-- Pagination -->
-            <div class="pagination" id="pagination" style="display: none;">
-                <button class="btn btn-secondary" onclick="previousPage()" id="prevBtn">← Previous</button>
-                <span class="page-info" id="pageInfo">Page 1</span>
-                <button class="btn btn-secondary" onclick="nextPage()" id="nextBtn">Next →</button>
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <div class="pagination-info" id="paginationInfo"></div>
+                <div class="pagination" id="pagination"></div>
             </div>
         </div>
     </div>
@@ -661,9 +702,10 @@
     const contextPath = /*[[@{/}]]*/ '/';
     const API_BASE_URL = contextPath + 'api/admin';
 
-    let currentResults = [];
     let currentPage = 0;
+    let pageSize = 10;
     let totalPages = 0;
+    let totalElements = 0;
     let currentFilter = null;
 
     // Toggle between exact age and age range inputs
@@ -778,9 +820,9 @@
             let url = '';
 
             if (currentFilter.type === 'department') {
-                url = `${API_BASE_URL}/by-department?departmentName=${encodeURIComponent(currentFilter.value)}&page=${currentPage}&size=10`;
+                url = `${API_BASE_URL}/by-department?departmentName=${encodeURIComponent(currentFilter.value)}&page=${currentPage}&size=${pageSize}`;
             } else if (currentFilter.type === 'age-exact') {
-                url = `${API_BASE_URL}/by-age?age=${currentFilter.age}&page=${currentPage}&size=10`;
+                url = `${API_BASE_URL}/by-age?age=${currentFilter.age}&page=${currentPage}&size=${pageSize}`;
             } else if (currentFilter.type === 'age-range') {
                 const params = new URLSearchParams();
                 if (currentFilter.minAge !== undefined && currentFilter.minAge !== null && !isNaN(currentFilter.minAge)) {
@@ -790,7 +832,7 @@
                     params.append('maxAge', currentFilter.maxAge);
                 }
                 params.append('page', currentPage);
-                params.append('size', 10);
+                params.append('size', pageSize);
                 url = `${API_BASE_URL}/by-age?${params.toString()}`;
             }
 
@@ -812,14 +854,15 @@
             }
 
             const data = await response.json();
-            currentResults = data.content || [];
-            totalPages = data.totalPages || 0;
+            currentPage = data.number;
+            totalPages = data.totalPages;
+            totalElements = data.totalElements;
 
-            displayResults();
-            updatePagination();
+            displayResults(data.content);
+            renderPagination();
             showLoading(false);
 
-            if (currentResults.length > 0) {
+            if (data.content.length > 0) {
                 showToast('Report generated successfully!');
             }
         } catch (error) {
@@ -830,7 +873,7 @@
     }
 
     // Display Results
-    function displayResults() {
+    function displayResults(employees) {
         const tbody = document.getElementById('resultsTableBody');
         const tableContainer = document.getElementById('tableContainer');
         const noResults = document.getElementById('noResults');
@@ -838,10 +881,11 @@
 
         tbody.innerHTML = '';
 
-        if (currentResults.length === 0) {
+        if (employees.length === 0) {
             tableContainer.style.display = 'none';
             noResults.style.display = 'block';
             resultsInfo.innerHTML = 'No employees found matching the criteria';
+            document.getElementById('paginationContainer').style.display = 'none';
             return;
         }
 
@@ -865,9 +909,9 @@
             }
             filterText = `Age Range: <span class="filter-badge">${ageText}</span>`;
         }
-        resultsInfo.innerHTML = `${filterText} | Total: <strong>${currentResults.length}</strong> employees`;
+        resultsInfo.innerHTML = `${filterText} | Total: <strong>${totalElements}</strong> employees`;
 
-        currentResults.forEach(employee => {
+        employees.forEach(employee => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${escapeHtml(employee.employeeCode || 'N/A')}</td>
@@ -879,39 +923,107 @@
             `;
             tbody.appendChild(row);
         });
+
+        document.getElementById('paginationContainer').style.display = 'flex';
     }
 
-    // Update Pagination
-    function updatePagination() {
-        const pagination = document.getElementById('pagination');
-        const pageInfo = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
+    // Render Pagination
+    function renderPagination() {
+        const paginationContainer = document.getElementById('pagination');
+        const paginationInfo = document.getElementById('paginationInfo');
+
+        // Update pagination info
+        const start = currentPage * pageSize + 1;
+        const end = Math.min((currentPage + 1) * pageSize, totalElements);
+        paginationInfo.textContent = `Showing ${start}-${end} of ${totalElements} employees`;
+
+        // Clear pagination
+        paginationContainer.innerHTML = '';
 
         if (totalPages <= 1) {
-            pagination.style.display = 'none';
+            document.getElementById('paginationContainer').style.display = 'none';
             return;
         }
 
-        pagination.style.display = 'flex';
-        pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+        document.getElementById('paginationContainer').style.display = 'flex';
+
+        // Previous button
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = '‹';
         prevBtn.disabled = currentPage === 0;
-        nextBtn.disabled = currentPage >= totalPages - 1;
+        prevBtn.onclick = () => goToPage(currentPage - 1);
+        paginationContainer.appendChild(prevBtn);
+
+        // Page numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(0, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(0, endPage - maxVisiblePages + 1);
+        }
+
+        // First page
+        if (startPage > 0) {
+            const firstBtn = document.createElement('button');
+            firstBtn.className = 'page-btn';
+            firstBtn.textContent = '1';
+            firstBtn.onclick = () => goToPage(0);
+            paginationContainer.appendChild(firstBtn);
+
+            if (startPage > 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.textContent = '...';
+                ellipsis.style.padding = '0 0.5rem';
+                paginationContainer.appendChild(ellipsis);
+            }
+        }
+
+        // Page number buttons
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = 'page-btn';
+            if (i === currentPage) {
+                pageBtn.classList.add('active');
+            }
+            pageBtn.textContent = i + 1;
+            pageBtn.onclick = () => goToPage(i);
+            paginationContainer.appendChild(pageBtn);
+        }
+
+        // Last page
+        if (endPage < totalPages - 1) {
+            if (endPage < totalPages - 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.textContent = '...';
+                ellipsis.style.padding = '0 0.5rem';
+                paginationContainer.appendChild(ellipsis);
+            }
+
+            const lastBtn = document.createElement('button');
+            lastBtn.className = 'page-btn';
+            lastBtn.textContent = totalPages;
+            lastBtn.onclick = () => goToPage(totalPages - 1);
+            paginationContainer.appendChild(lastBtn);
+        }
+
+        // Next button
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = '›';
+        nextBtn.disabled = currentPage === totalPages - 1;
+        nextBtn.onclick = () => goToPage(currentPage + 1);
+        paginationContainer.appendChild(nextBtn);
     }
 
-    // Pagination Controls
-    async function previousPage() {
-        if (currentPage > 0) {
-            currentPage--;
-            await loadReport();
+    // Go to Page
+    function goToPage(page) {
+        if (page < 0 || page >= totalPages) {
+            return;
         }
-    }
-
-    async function nextPage() {
-        if (currentPage < totalPages - 1) {
-            currentPage++;
-            await loadReport();
-        }
+        currentPage = page;
+        loadReport();
     }
 
     // Clear Filters
@@ -934,12 +1046,12 @@
 
     function clearResults() {
         currentFilter = null;
-        currentResults = [];
         currentPage = 0;
         totalPages = 0;
+        totalElements = 0;
         document.getElementById('tableContainer').style.display = 'none';
         document.getElementById('noResults').style.display = 'none';
-        document.getElementById('pagination').style.display = 'none';
+        document.getElementById('paginationContainer').style.display = 'none';
         document.getElementById('resultsInfo').innerHTML = 'Select a filter above to generate a report';
     }
 
@@ -953,7 +1065,7 @@
     // Show/hide loading
     function showLoading(show) {
         document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
-        document.getElementById('tableContainer').style.display = show ? 'none' : (currentResults.length > 0 ? 'block' : 'none');
+        document.getElementById('tableContainer').style.display = show ? 'none' : 'block';
         document.getElementById('noResults').style.display = 'none';
     }
 

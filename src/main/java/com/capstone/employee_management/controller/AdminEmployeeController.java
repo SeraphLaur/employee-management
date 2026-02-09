@@ -22,8 +22,12 @@ class AdminEmployeeController {
     }
 
     @GetMapping
-    public List<EmployeeResponseDto> getEmployees(Pageable pageable) {
-        return employeeService.findAll();
+    public Page<EmployeeResponseDto> getEmployees(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return employeeService.findAll(pageable);
     }
 
     @PostMapping("/add-employee")
@@ -42,8 +46,11 @@ class AdminEmployeeController {
     }
 
     @GetMapping("/search")
-    public List<EmployeeResponseDto> searchEmployees(@RequestParam String keyword) {
-        return employeeService.searchEmployees(keyword);
+    public Page<EmployeeResponseDto> searchEmployees(@RequestParam String keyword,
+                                                     @RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return employeeService.searchEmployees(keyword, pageable);
     }
 
     @GetMapping("/statistics")
