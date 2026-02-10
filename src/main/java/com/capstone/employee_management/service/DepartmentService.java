@@ -49,27 +49,26 @@ public class DepartmentService {
         if(req.deptName() == null){
             throw new IllegalArgumentException("Department cannot be null");
         }
-        boolean exists = departmentRepository.existsByNameIgnoreCase(deptName);
+        Department toUpdateDept = findDepartmentByName(deptName);
 
-        if(exists){
+        Optional<Department> existingWithNewName = departmentRepository.findByNameIgnoreCase(req.deptName());
+        if(existingWithNewName.isPresent() && !existingWithNewName.get().getId().equals(toUpdateDept.getId())){
             throw new IllegalArgumentException("Department already exists");
         }
-
-        Department toUpdateDept = findDepartmentByName(deptName);
         toUpdateDept.setName(req.deptName());
 
         return departmentMapper.toResponse(departmentRepository.save(toUpdateDept));
 
     }
 
-    public void deleteDepartment(DepartmentRequestDto req) {
-        if(req.deptName() == null){
+    public void deleteDepartment(String name) {
+        if(name == null){
             throw new IllegalArgumentException("Department cannot be null");
         }
-        if(!departmentRepository.existsByNameIgnoreCase(req.deptName())){
+        if(!departmentRepository.existsByNameIgnoreCase(name)){
             throw new IllegalArgumentException("Department does not exists");
         }
-        departmentRepository.delete(findDepartmentByName(req.deptName()));
+        departmentRepository.delete(findDepartmentByName(name));
     }
 
     //helper method, independent of the Employee Service interface

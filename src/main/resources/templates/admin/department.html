@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
-    <title>Employee Management System - Admin Dashboard</title>
+    <title>Employee Management System - Department Management</title>
     <style>
         * {
             margin: 0;
@@ -672,8 +672,8 @@
     <div class="header-content">
         <div class="logo">Employee Management</div>
         <div class="header-actions">
-            <a href="/admin/department" style="text-decoration: none;">
-                <button class="btn btn-secondary">Departments</button>
+            <a href="/admin/dashboard" style="text-decoration: none;">
+                <button class="btn btn-secondary">Dashboard</button>
             </a>
             <a href="/admin/reports" style="text-decoration: none;">
                 <button class="btn btn-secondary">Reports</button>
@@ -690,59 +690,44 @@
 
 <!-- Main Container -->
 <div class="container">
-    <div class="page-title">Dashboard</div>
-    <div class="page-subtitle">Overview of your employee data</div>
+    <div class="page-title">Department Management</div>
+    <div class="page-subtitle">Manage all departments in your organization</div>
 
     <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Total Employees</div>
-            <div class="stat-value" id="totalEmployees">0</div>
-            <div class="stat-description">Active in system</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Average Salary</div>
-            <div class="stat-value" id="avgSalary">₱0.00</div>
-            <div class="stat-description">Across all employees</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Average Age</div>
-            <div class="stat-value" id="avgAge">0</div>
-            <div class="stat-description">Years old</div>
+            <div class="stat-label">Total Departments</div>
+            <div class="stat-value" id="totalDepartments">0</div>
+            <div class="stat-description">Active departments</div>
         </div>
     </div>
 
     <!-- Toolbar -->
     <div class="toolbar">
         <div class="search-container">
-            <input type="text" class="search-input" id="searchInput" placeholder="Search by name, employee ID, or department...">
-            <button class="btn btn-primary" onclick="searchEmployees()">Search</button>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search departments...">
+            <button class="btn btn-primary" onclick="searchDepartments()">Search</button>
             <button class="btn btn-secondary" onclick="resetSearch()">Reset</button>
         </div>
-        <button class="btn btn-primary" onclick="openAddModal()">+ Add Employee</button>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add Department</button>
     </div>
 
     <!-- Loading State -->
     <div id="loadingMessage" class="loading" style="display: none;">
         <div class="loading-spinner"></div>
-        <div>Loading employees...</div>
+        <div>Loading departments...</div>
     </div>
 
     <!-- Table -->
     <div class="table-container" id="tableContainer">
-        <table id="employeeTable">
+        <table id="departmentTable">
             <thead>
             <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Date of Birth</th>
-                <th>Age</th>
-                <th>Department</th>
-                <th>Salary</th>
+                <th>Department Name</th>
                 <th>Actions</th>
             </tr>
             </thead>
-            <tbody id="employeeTableBody">
+            <tbody id="departmentTableBody">
             </tbody>
         </table>
 
@@ -754,43 +739,19 @@
     </div>
 </div>
 
-<!-- Add/Edit Employee Modal -->
-<div id="employeeModal" class="modal">
+<!-- Add/Edit Department Modal -->
+<div id="departmentModal" class="modal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h2 class="modal-title" id="modalTitle">Add Employee</h2>
+            <h2 class="modal-title" id="modalTitle">Add Department</h2>
             <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
-        <form id="employeeForm" onsubmit="submitEmployee(event)">
+        <form id="departmentForm" onsubmit="submitDepartment(event)">
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label" for="employeeId">Employee ID</label>
-                    <input type="text" class="form-control" id="employeeId" required>
-                    <div class="form-error" id="employeeIdError"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="name">Name</label>
-                    <input type="text" class="form-control" id="name" required>
-                    <div class="form-error" id="nameError"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="dateOfBirth">Date of Birth</label>
-                    <input type="date" class="form-control" id="dateOfBirth" required max="">
-                    <div class="form-error" id="dateOfBirthError"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="departmentName">Department</label>
-                    <input type="text" class="form-control" id="departmentName" required>
-                    <div class="form-error" id="departmentNameError"></div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="salary">Salary</label>
-                    <input type="number" class="form-control" id="salary" step="0.01" min="0" required>
-                    <div class="form-error" id="salaryError"></div>
+                    <label class="form-label" for="deptName">Department Name</label>
+                    <input type="text" class="form-control" id="deptName" required>
+                    <div class="form-error" id="deptNameError"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -814,19 +775,13 @@
         return document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
     }
 
-    let currentEmployeeId = null;
+    let currentDepartmentName = null;
     let currentPage = 0;
-    let pageSize = 5;
+    let pageSize = 10;
     let totalPages = 0;
     let totalElements = 0;
     let isSearching = false;
     let currentSearchKeyword = '';
-
-    // Set max date for date of birth to today
-    function setMaxDateForBirthdate() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('dateOfBirth').setAttribute('max', today);
-    }
 
     // Toast Notifications
     function showToast(message, type = 'success') {
@@ -853,42 +808,13 @@
     }
 
     window.onload = function() {
-        setMaxDateForBirthdate();
-        loadEmployees(0);
-        loadStatistics();
+        loadDepartments(0);
     };
 
-    async function loadStatistics() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/statistics`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin'
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to load statistics');
-            }
-
-            const stats = await response.json();
-            document.getElementById('totalEmployees').textContent = stats.totalEmployees || 0;
-            document.getElementById('avgSalary').textContent = stats.averageSalary
-                ? `₱${parseFloat(stats.averageSalary).toFixed(2)}`
-                : '₱0.00';
-            document.getElementById('avgAge').textContent = stats.averageAge
-                ? Math.round(stats.averageAge)
-                : 0;
-        } catch (error) {
-            console.error('Error loading statistics:', error);
-        }
-    }
-
-    async function loadEmployees(page) {
+    async function loadDepartments(page) {
         try {
             showLoading(true);
-            const response = await fetch(`${API_BASE_URL}?page=${page}&size=${pageSize}`, {
+            const response = await fetch(`${API_BASE_URL}/find-all?page=${page}&size=${pageSize}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -901,7 +827,7 @@
                     window.location.href = contextPath + 'login';
                     return;
                 }
-                throw new Error('Failed to load employees');
+                throw new Error('Failed to load departments');
             }
 
             const data = await response.json();
@@ -910,39 +836,35 @@
             totalElements = data.totalElements;
             isSearching = false;
 
-            displayEmployees(data.content);
+            displayDepartments(data.content);
+            updateStatistics();
             renderPagination();
             showLoading(false);
         } catch (error) {
-            console.error('Error loading employees:', error);
-            showToast('Error loading employees: ' + error.message, 'error');
+            console.error('Error loading departments:', error);
+            showToast('Error loading departments: ' + error.message, 'error');
             showLoading(false);
         }
     }
 
-    function displayEmployees(employees) {
-        const tbody = document.getElementById('employeeTableBody');
+    function displayDepartments(departments) {
+        const tbody = document.getElementById('departmentTableBody');
         tbody.innerHTML = '';
 
-        if (employees.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No employees found</td></tr>';
+        if (departments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" class="empty-state">No departments found</td></tr>';
             document.getElementById('paginationContainer').style.display = 'none';
             return;
         }
 
-        employees.forEach(employee => {
+        departments.forEach(department => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${escapeHtml(employee.employeeCode || 'N/A')}</td>
-                <td>${escapeHtml(employee.name || 'N/A')}</td>
-                <td>${escapeHtml(employee.dateOfBirth || 'N/A')}</td>
-                <td>${employee.age || 'N/A'}</td>
-                <td>${escapeHtml(employee.department || 'N/A')}</td>
-                <td>₱${employee.salary ? employee.salary.toFixed(2) : '0.00'}</td>
+                <td>${escapeHtml(department.deptName || 'N/A')}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="openEditModal(${employee.id})">Edit</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${employee.id})">Delete</button>
+                        <button class="btn btn-sm btn-secondary" onclick="openEditModal('${escapeHtml(department.deptName)}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteDepartment('${escapeHtml(department.deptName)}')">Delete</button>
                     </div>
                 </td>
             `;
@@ -952,6 +874,10 @@
         document.getElementById('paginationContainer').style.display = 'flex';
     }
 
+    function updateStatistics() {
+        document.getElementById('totalDepartments').textContent = totalElements || 0;
+    }
+
     function renderPagination() {
         const paginationContainer = document.getElementById('pagination');
         const paginationInfo = document.getElementById('paginationInfo');
@@ -959,7 +885,7 @@
         // Update pagination info
         const start = currentPage * pageSize + 1;
         const end = Math.min((currentPage + 1) * pageSize, totalElements);
-        paginationInfo.textContent = `Showing ${start}-${end} of ${totalElements} employees`;
+        paginationInfo.textContent = `Showing ${start}-${end} of ${totalElements} departments`;
 
         // Clear pagination
         paginationContainer.innerHTML = '';
@@ -1044,9 +970,9 @@
         }
 
         if (isSearching) {
-            searchEmployees(page);
+            searchDepartments(page);
         } else {
-            loadEmployees(page);
+            loadDepartments(page);
         }
     }
 
@@ -1056,11 +982,11 @@
         return div.innerHTML;
     }
 
-    async function searchEmployees(page = 0) {
+    async function searchDepartments(page = 0) {
         const searchTerm = document.getElementById('searchInput').value.trim();
 
         if (!searchTerm) {
-            loadEmployees(0);
+            loadDepartments(0);
             return;
         }
 
@@ -1069,7 +995,8 @@
             currentSearchKeyword = searchTerm;
             isSearching = true;
 
-            const response = await fetch(`${API_BASE_URL}/search?keyword=${encodeURIComponent(searchTerm)}&page=${page}&size=${pageSize}`, {
+            // Since there's no search endpoint, we'll filter client-side
+            const response = await fetch(`${API_BASE_URL}/find-all?page=0&size=1000`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1078,20 +1005,30 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to search employees');
+                throw new Error('Failed to search departments');
             }
 
             const data = await response.json();
-            currentPage = data.number;
-            totalPages = data.totalPages;
-            totalElements = data.totalElements;
+            const filtered = data.content.filter(dept =>
+                dept.deptName.toLowerCase().includes(searchTerm.toLowerCase())
+            );
 
-            displayEmployees(data.content);
+            // Manual pagination of filtered results
+            totalElements = filtered.length;
+            totalPages = Math.ceil(totalElements / pageSize);
+            currentPage = Math.min(page, totalPages - 1);
+
+            const start = currentPage * pageSize;
+            const end = start + pageSize;
+            const pageData = filtered.slice(start, end);
+
+            displayDepartments(pageData);
+            updateStatistics();
             renderPagination();
             showLoading(false);
         } catch (error) {
-            console.error('Error searching employees:', error);
-            showToast('Error searching employees: ' + error.message, 'error');
+            console.error('Error searching departments:', error);
+            showToast('Error searching departments: ' + error.message, 'error');
             showLoading(false);
         }
     }
@@ -1100,62 +1037,30 @@
         document.getElementById('searchInput').value = '';
         currentSearchKeyword = '';
         isSearching = false;
-        loadEmployees(0);
+        loadDepartments(0);
     }
 
     function openAddModal() {
-        currentEmployeeId = null;
-        document.getElementById('modalTitle').innerText = 'Add Employee';
-        document.getElementById('employeeForm').reset();
+        currentDepartmentName = null;
+        document.getElementById('modalTitle').innerText = 'Add Department';
+        document.getElementById('departmentForm').reset();
         clearFormErrors();
-        setMaxDateForBirthdate();
-        document.getElementById('employeeModal').style.display = 'block';
+        document.getElementById('departmentModal').style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
 
-    async function openEditModal(id) {
-        try {
-            // Fetch fresh employee data
-            const response = await fetch(`${API_BASE_URL}?page=0&size=1000`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin'
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch employee data');
-            }
-
-            const data = await response.json();
-            const employee = data.content.find(emp => emp.id === id);
-
-            if (!employee) {
-                showToast('Employee not found', 'error');
-                return;
-            }
-
-            currentEmployeeId = id;
-            document.getElementById('modalTitle').innerText = 'Edit Employee';
-            document.getElementById('employeeId').value = employee.employeeCode || '';
-            document.getElementById('name').value = employee.name || '';
-            document.getElementById('dateOfBirth').value = employee.dateOfBirth || '';
-            document.getElementById('departmentName').value = employee.department || '';
-            document.getElementById('salary').value = employee.salary || '';
-            clearFormErrors();
-            setMaxDateForBirthdate();
-            document.getElementById('employeeModal').style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        } catch (error) {
-            console.error('Error opening edit modal:', error);
-            showToast('Error loading employee data', 'error');
-        }
+    function openEditModal(deptName) {
+        currentDepartmentName = deptName;
+        document.getElementById('modalTitle').innerText = 'Edit Department';
+        document.getElementById('deptName').value = deptName;
+        clearFormErrors();
+        document.getElementById('departmentModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
     }
 
     function closeModal() {
-        document.getElementById('employeeModal').style.display = 'none';
-        document.getElementById('employeeForm').reset();
+        document.getElementById('departmentModal').style.display = 'none';
+        document.getElementById('departmentForm').reset();
         clearFormErrors();
         document.body.style.overflow = 'auto';
     }
@@ -1181,30 +1086,24 @@
         }
     }
 
-    async function submitEmployee(event) {
+    async function submitDepartment(event) {
         event.preventDefault();
         clearFormErrors();
 
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
 
-        const employeeData = {
-            employeeId: document.getElementById('employeeId').value.trim(),
-            name: document.getElementById('name').value.trim(),
-            dateOfBirth: document.getElementById('dateOfBirth').value,
-            departmentName: document.getElementById('departmentName').value.trim(),
-            salary: parseFloat(document.getElementById('salary').value)
+        const departmentData = {
+            deptName: document.getElementById('deptName').value.trim()
         };
 
         try {
-            let url = API_BASE_URL;
+            let url = `${API_BASE_URL}/add-department`;
             let method = 'POST';
 
-            if (currentEmployeeId) {
-                url = `${API_BASE_URL}/edit-employee/${currentEmployeeId}`;
+            if (currentDepartmentName) {
+                url = `${API_BASE_URL}/${encodeURIComponent(currentDepartmentName)}`;
                 method = 'PUT';
-            } else {
-                url = `${API_BASE_URL}/add-employee`;
             }
 
             const headers = {
@@ -1216,59 +1115,56 @@
                 method: method,
                 headers: headers,
                 credentials: 'same-origin',
-                body: JSON.stringify(employeeData)
+                body: JSON.stringify(departmentData)
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
 
-                // Check for duplicate employee code error
-                if (errorText.includes('Employee with this employee code already exists') ||
-                    errorText.includes('already exists') ||
-                    response.status === 409) {
-                    showFieldError('employeeId', 'An employee with this ID already exists');
+                // Check for duplicate department error
+                if (errorText.includes('already exists') || response.status === 409) {
+                    showFieldError('deptName', 'A department with this name already exists');
                     submitBtn.disabled = false;
                     return;
                 }
 
-                throw new Error(errorText || 'Failed to save employee');
+                throw new Error(errorText || 'Failed to save department');
             }
 
-            const savedEmployee = await response.json();
             closeModal();
-            showToast(currentEmployeeId ? 'Employee updated successfully!' : 'Employee added successfully!');
+            showToast(currentDepartmentName ? 'Department updated successfully!' : 'Department added successfully!');
 
             // Reload current page
             if (isSearching) {
-                searchEmployees(currentPage);
+                searchDepartments(currentPage);
             } else {
-                loadEmployees(currentPage);
+                loadDepartments(currentPage);
             }
-            loadStatistics();
         } catch (error) {
-            console.error('Error saving employee:', error);
+            console.error('Error saving department:', error);
 
-            // Check if error message indicates duplicate
-            if (error.message.includes('already exists') || error.message.includes('duplicate')) {
-                showFieldError('employeeId', 'An employee with this ID already exists');
+            if (error.message.includes('already exists')) {
+                showFieldError('deptName', 'A department with this name already exists');
             } else {
-                showToast('Error saving employee: ' + error.message, 'error');
+                showToast('Error saving department: ' + error.message, 'error');
             }
         } finally {
             submitBtn.disabled = false;
         }
     }
 
-    async function deleteEmployee(id) {
-        if (!confirm('Are you sure you want to delete this employee?')) {
+    async function deleteDepartment(deptName) {
+        if (!confirm(`Are you sure you want to delete the department "${deptName}"?`)) {
             return;
         }
 
         try {
-            const headers = {};
+            const headers = {
+                'Content-Type': 'application/json',
+            };
             headers[getCsrfHeader()] = getCsrfToken();
 
-            const response = await fetch(`${API_BASE_URL}/delete-employee/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/${encodeURIComponent(deptName)}`, {
                 method: 'DELETE',
                 headers: headers,
                 credentials: 'same-origin'
@@ -1276,27 +1172,26 @@
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || 'Failed to delete employee');
+                throw new Error(errorText || 'Failed to delete department');
             }
 
-            showToast('Employee deleted successfully!');
+            showToast('Department deleted successfully!');
 
             // If we're on the last item of a page (not the first page), go to previous page
-            const tbody = document.getElementById('employeeTableBody');
+            const tbody = document.getElementById('departmentTableBody');
             if (tbody.children.length === 1 && currentPage > 0) {
                 goToPage(currentPage - 1);
             } else {
                 // Reload current page
                 if (isSearching) {
-                    searchEmployees(currentPage);
+                    searchDepartments(currentPage);
                 } else {
-                    loadEmployees(currentPage);
+                    loadDepartments(currentPage);
                 }
             }
-            loadStatistics();
         } catch (error) {
-            console.error('Error deleting employee:', error);
-            showToast('Error deleting employee: ' + error.message, 'error');
+            console.error('Error deleting department:', error);
+            showToast('Error deleting department: ' + error.message, 'error');
         }
     }
 
@@ -1306,7 +1201,7 @@
     }
 
     window.onclick = function(event) {
-        const modal = document.getElementById('employeeModal');
+        const modal = document.getElementById('departmentModal');
         if (event.target === modal) {
             closeModal();
         }
@@ -1314,7 +1209,7 @@
 
     document.getElementById('searchInput').addEventListener('keypress', function(event) {
         if (event.key === 'Enter') {
-            searchEmployees(0);
+            searchDepartments(0);
         }
     });
     /*]]>*/

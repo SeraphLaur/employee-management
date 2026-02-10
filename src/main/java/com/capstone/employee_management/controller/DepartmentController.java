@@ -15,7 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/department")
+@RequestMapping("${api.admin.path}")
 public class DepartmentController {
     private final DepartmentService  departmentService;
 
@@ -24,7 +24,7 @@ public class DepartmentController {
         this.departmentService = departmentService;
     }
 
-    @GetMapping
+    @GetMapping("${api.admin.department.find.all}")
     public Page<DepartmentResponseDto> findAllDepartments(
             @RequestParam(defaultValue = "${pagination.default.page}") int page,
             @RequestParam(defaultValue = "${pagination.default.size}") int size
@@ -33,17 +33,18 @@ public class DepartmentController {
         return departmentService.findAll(pageable);
     }
 
-    @PostMapping
+    @PostMapping("${api.admin.department.add}")
     public DepartmentResponseDto addDepartment(@RequestBody DepartmentRequestDto req) {
         return departmentService.createDepartment(req);
     }
 
-    @PutMapping
+    @PutMapping("${api.admin.department.edit}")
     public DepartmentResponseDto updateDepartment(@PathVariable String name, @RequestBody DepartmentRequestDto req) {
         return departmentService.updateDepartment(name, req);
     }
 
-    public void deleteDepartment(@PathVariable DepartmentRequestDto req) {
-        departmentService.deleteDepartment(req);
+    @DeleteMapping("${api.admin.department.delete}")
+    public void deleteDepartment(@PathVariable String name) {
+        departmentService.deleteDepartment(name);
     }
 }
