@@ -24,28 +24,22 @@ public class AdminPageController {
         this.departmentService = departmentService;
     }
 
-    @GetMapping("${admin.login}")
+    @GetMapping("/login")
     public String loginPage() {
         return "login";
     }
 
-    @GetMapping("${admin.dashboard}")
-    public Page<EmployeeResponseDto> getEmployees(
-            @RequestParam(defaultValue = "${pagination.default.page}") int page,
-            @RequestParam(defaultValue = "${pagination.default.size}") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return employeeManagementService.findAll(pageable);
+    @GetMapping("/admin/dashboard")
+    public String dashboardPage() {
+        return "admin/dashboard";
     }
 
-    @GetMapping("${admin.department}")
-    public Page<DepartmentResponseDto> getDepartments(
-            @RequestParam(defaultValue = "${pagination.default.page}") int page,
-            @RequestParam(defaultValue = "${pagination.default.size}") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return departmentService.findAll(pageable);
+    @GetMapping("/admin/department")
+    public String departmentPage() {
+        return "admin/department";
     }
 
-    @GetMapping("${admin.reports}")
+    @GetMapping("/admin/reports")
     public String reportsPage() {
         return "admin/reports";
     }

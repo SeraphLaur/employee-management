@@ -1087,113 +1087,128 @@
     }
 
     async function submitDepartment(event) {
-        event.preventDefault();
-        clearFormErrors();
+    event.preventDefault();
+    clearFormErrors();
 
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
 
-        const departmentData = {
-            deptName: document.getElementById('deptName').value.trim()
+    const departmentData = {
+        deptName: document.getElementById('deptName').value.trim()
+    };
+
+    try {
+        let url = `${API_BASE_URL}/add-department`;
+        let method = 'POST';
+
+        if (currentDepartmentName) {
+            url = `${API_BASE_URL}/${encodeURIComponent(currentDepartmentName)}`;
+            method = 'PUT';
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
         };
+        headers[getCsrfHeader()] = getCsrfToken();
 
-        try {
-            let url = `${API_BASE_URL}/add-department`;
-            let method = 'POST';
+        const response = await fetch(url, {
+            method: method,
+            headers: headers,
+            credentials: 'same-origin',
+            body: JSON.stringify(departmentData)
+        });
 
-            if (currentDepartmentName) {
-                url = `${API_BASE_URL}/${encodeURIComponent(currentDepartmentName)}`;
-                method = 'PUT';
+        // Parse the response body
+        const responseData = await response.json().catch(() => null);
+
+        if (!response.ok) {
+            // Extract error message from backend response
+            let errorMessage = 'Failed to save department';
+
+            if (responseData && responseData.error) {
+                errorMessage = responseData.error;
             }
 
-            const headers = {
-                'Content-Type': 'application/json',
-            };
-            headers[getCsrfHeader()] = getCsrfToken();
-
-            const response = await fetch(url, {
-                method: method,
-                headers: headers,
-                credentials: 'same-origin',
-                body: JSON.stringify(departmentData)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-
-                // Check for duplicate department error
-                if (errorText.includes('already exists') || response.status === 409) {
-                    showFieldError('deptName', 'A department with this name already exists');
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                throw new Error(errorText || 'Failed to save department');
+            // Check if it's a duplicate/already exists error
+            if (errorMessage.includes('already exists') || response.status === 400 || response.status === 409) {
+                showFieldError('deptName', errorMessage);
+            } else if (response.status === 404) {
+                showToast(errorMessage, 'error');
+                closeModal();
+            } else {
+                showToast(errorMessage, 'error');
             }
 
-            closeModal();
-            showToast(currentDepartmentName ? 'Department updated successfully!' : 'Department added successfully!');
+            submitBtn.disabled = false;
+            return;
+        }
 
+        closeModal();
+        showToast(currentDepartmentName ? 'Department updated successfully!' : 'Department added successfully!');
+
+        // Reload current page
+        if (isSearching) {
+            searchDepartments(currentPage);
+        } else {
+            loadDepartments(currentPage);
+        }
+    } catch (error) {
+        console.error('Error saving department:', error);
+        showToast('Error saving department. Please try again.', 'error');
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function deleteDepartment(deptName) {
+    if (!confirm(`Are you sure you want to delete the department "${deptName}"?`)) {
+        return;
+    }
+
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        headers[getCsrfHeader()] = getCsrfToken();
+
+        const response = await fetch(`${API_BASE_URL}/${encodeURIComponent(deptName)}`, {
+            method: 'DELETE',
+            headers: headers,
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            // Try to parse error response
+            const responseData = await response.json().catch(() => null);
+            let errorMessage = 'Failed to delete department';
+
+            if (responseData && responseData.error) {
+                errorMessage = responseData.error;
+            }
+
+            showToast(errorMessage, 'error');
+            return;
+        }
+
+        showToast('Department deleted successfully!');
+
+        // If we're on the last item of a page (not the first page), go to previous page
+        const tbody = document.getElementById('departmentTableBody');
+        if (tbody.children.length === 1 && currentPage > 0) {
+            goToPage(currentPage - 1);
+        } else {
             // Reload current page
             if (isSearching) {
                 searchDepartments(currentPage);
             } else {
                 loadDepartments(currentPage);
             }
-        } catch (error) {
-            console.error('Error saving department:', error);
-
-            if (error.message.includes('already exists')) {
-                showFieldError('deptName', 'A department with this name already exists');
-            } else {
-                showToast('Error saving department: ' + error.message, 'error');
-            }
-        } finally {
-            submitBtn.disabled = false;
         }
+    } catch (error) {
+        console.error('Error deleting department:', error);
+        showToast('Error deleting department. Please try again.', 'error');
     }
-
-    async function deleteDepartment(deptName) {
-        if (!confirm(`Are you sure you want to delete the department "${deptName}"?`)) {
-            return;
-        }
-
-        try {
-            const headers = {
-                'Content-Type': 'application/json',
-            };
-            headers[getCsrfHeader()] = getCsrfToken();
-
-            const response = await fetch(`${API_BASE_URL}/${encodeURIComponent(deptName)}`, {
-                method: 'DELETE',
-                headers: headers,
-                credentials: 'same-origin'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to delete department');
-            }
-
-            showToast('Department deleted successfully!');
-
-            // If we're on the last item of a page (not the first page), go to previous page
-            const tbody = document.getElementById('departmentTableBody');
-            if (tbody.children.length === 1 && currentPage > 0) {
-                goToPage(currentPage - 1);
-            } else {
-                // Reload current page
-                if (isSearching) {
-                    searchDepartments(currentPage);
-                } else {
-                    loadDepartments(currentPage);
-                }
-            }
-        } catch (error) {
-            console.error('Error deleting department:', error);
-            showToast('Error deleting department: ' + error.message, 'error');
-        }
-    }
+}
 
     function showLoading(show) {
         document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';

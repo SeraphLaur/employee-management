@@ -749,128 +749,157 @@
     }
 
     // Filter by Department
-    async function filterByDepartment() {
-        const departmentName = document.getElementById('departmentName').value.trim();
+async function filterByDepartment() {
+    const departmentName = document.getElementById('departmentName').value.trim();
 
-        if (!departmentName) {
-            showToast('Please enter a department name', 'error');
+    if (!departmentName) {
+        showToast('Please enter a department name', 'error');
+        return;
+    }
+
+    currentFilter = { type: 'department', value: departmentName };
+    currentPage = 0;
+    await loadReport();
+}
+
+// Filter by Age
+async function filterByAge() {
+    const filterType = document.querySelector('input[name="ageFilter"]:checked').value;
+
+    if (filterType === 'exact') {
+        const age = parseInt(document.getElementById('exactAge').value);
+
+        if (!age && age !== 0) {
+            showToast('Please enter an age', 'error');
             return;
         }
 
-        currentFilter = { type: 'department', value: departmentName };
-        currentPage = 0;
-        await loadReport();
-    }
-
-    // Filter by Age
-    async function filterByAge() {
-        const filterType = document.querySelector('input[name="ageFilter"]:checked').value;
-
-        if (filterType === 'exact') {
-            const age = parseInt(document.getElementById('exactAge').value);
-
-            if (!age) {
-                showToast('Please enter an age', 'error');
-                return;
-            }
-
-            if (age < 0) {
-                showToast('Age cannot be negative', 'error');
-                return;
-            }
-
-            currentFilter = { type: 'age-exact', age };
-        } else {
-            const minAge = parseInt(document.getElementById('minAge').value);
-            const maxAge = parseInt(document.getElementById('maxAge').value);
-
-            if (!minAge && !maxAge) {
-                showToast('Please enter at least minimum or maximum age', 'error');
-                return;
-            }
-
-            if (minAge && minAge < 0) {
-                showToast('Minimum age cannot be negative', 'error');
-                return;
-            }
-
-            if (maxAge && maxAge < 0) {
-                showToast('Maximum age cannot be negative', 'error');
-                return;
-            }
-
-            if (minAge && maxAge && minAge > maxAge) {
-                showToast('Minimum age cannot be greater than maximum age', 'error');
-                return;
-            }
-
-            currentFilter = { type: 'age-range', minAge, maxAge };
+        if (age <= 0) {
+            showToast('Age cannot be zero or negative', 'error');
+            return;
         }
 
-        currentPage = 0;
-        await loadReport();
-    }
+        currentFilter = { type: 'age-exact', age };
+    } else {
+        const minAge = parseInt(document.getElementById('minAge').value);
+        const maxAge = parseInt(document.getElementById('maxAge').value);
 
-    // Load Report
-    async function loadReport() {
-        if (!currentFilter) return;
-
-        try {
-            showLoading(true);
-            let url = '';
-
-            if (currentFilter.type === 'department') {
-                url = `${API_BASE_URL}/by-department?departmentName=${encodeURIComponent(currentFilter.value)}&page=${currentPage}&size=${pageSize}`;
-            } else if (currentFilter.type === 'age-exact') {
-                url = `${API_BASE_URL}/by-age?age=${currentFilter.age}&page=${currentPage}&size=${pageSize}`;
-            } else if (currentFilter.type === 'age-range') {
-                const params = new URLSearchParams();
-                if (currentFilter.minAge !== undefined && currentFilter.minAge !== null && !isNaN(currentFilter.minAge)) {
-                    params.append('minAge', currentFilter.minAge);
-                }
-                if (currentFilter.maxAge !== undefined && currentFilter.maxAge !== null && !isNaN(currentFilter.maxAge)) {
-                    params.append('maxAge', currentFilter.maxAge);
-                }
-                params.append('page', currentPage);
-                params.append('size', pageSize);
-                url = `${API_BASE_URL}/by-age?${params.toString()}`;
-            }
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin'
-            });
-
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    window.location.href = contextPath + 'login';
-                    return;
-                }
-                const errorData = await response.json().catch(() => ({ message: 'Failed to load report' }));
-                throw new Error(errorData.message || 'Failed to load report');
-            }
-
-            const data = await response.json();
-            currentPage = data.number;
-            totalPages = data.totalPages;
-            totalElements = data.totalElements;
-
-            displayResults(data.content);
-            renderPagination();
-            showLoading(false);
-
-            if (data.content.length > 0) {
-                showToast('Report generated successfully!');
-            }
-        } catch (error) {
-            console.error('Error loading report:', error);
-            showToast('Error loading report: ' + error.message, 'error');
-            showLoading(false);
+        if (!minAge && !maxAge && minAge !== 0 && maxAge !== 0) {
+            showToast('Please enter at least minimum or maximum age', 'error');
+            return;
         }
+
+        if (minAge && minAge <= 0) {
+            showToast('Minimum age cannot be zero or negative', 'error');
+            return;
+        }
+
+        if (maxAge && maxAge <= 0) {
+            showToast('Maximum age cannot be zero or negative', 'error');
+            return;
+        }
+
+        if (minAge && maxAge && minAge > maxAge) {
+            showToast('Minimum age cannot be greater than maximum age', 'error');
+            return;
+        }
+
+        currentFilter = { type: 'age-range', minAge, maxAge };
     }
+
+    currentPage = 0;
+    await loadReport();
+}
+
+// Load Report
+async function loadReport() {
+    if (!currentFilter) return;
+
+    try {
+        showLoading(true);
+        let url = '';
+
+        if (currentFilter.type === 'department') {
+            url = `${API_BASE_URL}/by-department?departmentName=${encodeURIComponent(currentFilter.value)}&page=${currentPage}&size=${pageSize}`;
+        } else if (currentFilter.type === 'age-exact') {
+            url = `${API_BASE_URL}/by-age?age=${currentFilter.age}&page=${currentPage}&size=${pageSize}`;
+        } else if (currentFilter.type === 'age-range') {
+            const params = new URLSearchParams();
+            if (currentFilter.minAge !== undefined && currentFilter.minAge !== null && !isNaN(currentFilter.minAge)) {
+                params.append('minAge', currentFilter.minAge);
+            }
+            if (currentFilter.maxAge !== undefined && currentFilter.maxAge !== null && !isNaN(currentFilter.maxAge)) {
+                params.append('maxAge', currentFilter.maxAge);
+            }
+            params.append('page', currentPage);
+            params.append('size', pageSize);
+            url = `${API_BASE_URL}/by-age?${params.toString()}`;
+        }
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                window.location.href = contextPath + 'login';
+                return;
+            }
+
+            // Try to parse error response from backend
+            const responseData = await response.json().catch(() => null);
+            let errorMessage = 'Failed to load report';
+
+            if (responseData && responseData.error) {
+                errorMessage = responseData.error;
+            }
+
+            // Handle specific error types
+            if (response.status === 404) {
+                // Department not found or no employees found
+                if (errorMessage.includes('Department not found')) {
+                    showToast(errorMessage, 'error');
+                    clearResults();
+                } else {
+                    // No employees found - show empty results
+                    displayResults([]);
+                    renderPagination();
+                }
+            } else if (response.status === 400) {
+                // Validation error from backend
+                showToast(errorMessage, 'error');
+                clearResults();
+            } else {
+                throw new Error(errorMessage);
+            }
+
+            showLoading(false);
+            return;
+        }
+
+        const data = await response.json();
+        currentPage = data.number;
+        totalPages = data.totalPages;
+        totalElements = data.totalElements;
+
+        displayResults(data.content);
+        renderPagination();
+        showLoading(false);
+
+        if (data.content.length > 0) {
+            showToast('Report generated successfully!');
+        }
+    } catch (error) {
+        console.error('Error loading report:', error);
+        showToast('Error loading report: ' + error.message, 'error');
+        showLoading(false);
+        clearResults();
+    }
+}
 
     // Display Results
     function displayResults(employees) {
