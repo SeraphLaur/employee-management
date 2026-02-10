@@ -24,7 +24,7 @@ class AdminEmployeeController {
     @GetMapping
     public Page<EmployeeResponseDto> getEmployees(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "5") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.findAll(pageable);
@@ -48,7 +48,7 @@ class AdminEmployeeController {
     @GetMapping("/search")
     public Page<EmployeeResponseDto> searchEmployees(@RequestParam String keyword,
                                                      @RequestParam(defaultValue = "0") int page,
-                                                     @RequestParam(defaultValue = "10") int size) {
+                                                     @RequestParam(defaultValue = "5") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.searchEmployees(keyword, pageable);
     }
@@ -62,7 +62,7 @@ class AdminEmployeeController {
     public Page<EmployeeResponseDto> getEmployeesByDepartment(
             @RequestParam String departmentName,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "5") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.findByDepartment(departmentName, pageable);
     }
@@ -73,7 +73,7 @@ class AdminEmployeeController {
             @RequestParam(required = false) Integer minAge,
             @RequestParam(required = false) Integer maxAge,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "5") int size) {
         Pageable pageable = PageRequest.of(page, size);
 
         if(age != null) {

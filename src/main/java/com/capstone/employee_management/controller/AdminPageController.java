@@ -28,7 +28,7 @@ public class AdminPageController {
     @GetMapping("/admin/dashboard")
     public Page<EmployeeResponseDto> getEmployees(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "5") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeManagementService.findAll(pageable);
     }
