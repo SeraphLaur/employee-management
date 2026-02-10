@@ -1,5 +1,7 @@
-package com.capstone.employee_management.dto;
+package com.capstone.employee_management.mapper;
 
+import com.capstone.employee_management.dto.EmployeeRequestDto;
+import com.capstone.employee_management.dto.EmployeeResponseDto;
 import com.capstone.employee_management.model.Department;
 import com.capstone.employee_management.model.Employee;
 import org.springframework.stereotype.Component;

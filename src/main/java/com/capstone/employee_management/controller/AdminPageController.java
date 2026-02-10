@@ -20,20 +20,20 @@ public class AdminPageController {
         this.employeeManagementService = employeeManagementService;
     }
 
-    @GetMapping("/login")
+    @GetMapping("${admin.login}")
     public String loginPage() {
         return "login";
     }
 
-    @GetMapping("/admin/dashboard")
+    @GetMapping("${admin.dashboard}")
     public Page<EmployeeResponseDto> getEmployees(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "${pagination.default.page}") int page,
+            @RequestParam(defaultValue = "${pagination.default.size}") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeManagementService.findAll(pageable);
     }
 
-    @GetMapping("/admin/reports")
+    @GetMapping("${admin.reports}")
     public String reportsPage() {
         return "admin/reports";
     }

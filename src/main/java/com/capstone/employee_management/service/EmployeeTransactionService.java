@@ -1,21 +1,16 @@
 package com.capstone.employee_management.service;
 
-import com.capstone.employee_management.dto.EmployeeMapper;
-import com.capstone.employee_management.dto.EmployeeRequestDto;
+import com.capstone.employee_management.mapper.EmployeeMapper;
 import com.capstone.employee_management.dto.EmployeeResponseDto;
 import com.capstone.employee_management.dto.StatisticsResponseDto;
-import com.capstone.employee_management.model.Department;
-import com.capstone.employee_management.model.Employee;
 import com.capstone.employee_management.repository.DepartmentRepository;
 import com.capstone.employee_management.repository.EmployeeRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 
 @Service

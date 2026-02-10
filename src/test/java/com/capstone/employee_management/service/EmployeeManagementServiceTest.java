@@ -1,6 +1,6 @@
 package com.capstone.employee_management.service;
 
-import com.capstone.employee_management.dto.EmployeeMapper;
+import com.capstone.employee_management.mapper.EmployeeMapper;
 import com.capstone.employee_management.dto.EmployeeRequestDto;
 import com.capstone.employee_management.dto.EmployeeResponseDto;
 import com.capstone.employee_management.dto.StatisticsResponseDto;

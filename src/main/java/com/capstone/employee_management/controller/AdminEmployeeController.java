@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping("${api.admin.path}")
 class AdminEmployeeController {
     private final EmployeeService employeeService;
 
@@ -23,57 +23,57 @@ class AdminEmployeeController {
 
     @GetMapping
     public Page<EmployeeResponseDto> getEmployees(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size
+            @RequestParam(defaultValue = "${pagination.default.page}") int page,
+            @RequestParam(defaultValue = "${pagination.default.size}") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.findAll(pageable);
     }
 
-    @PostMapping("/add-employee")
+    @PostMapping("${api.admin.employee.add}")
     public EmployeeResponseDto addEmployee(@RequestBody EmployeeRequestDto employeeRequestDto) {
         return employeeService.createEmployee(employeeRequestDto);
     }
 
-    @PutMapping("/edit-employee/{id}")
+    @PutMapping("${api.admin.employee.edit}")
     public EmployeeResponseDto editEmployee(@PathVariable Long id, @RequestBody EmployeeRequestDto employeeRequestDto) {
         return employeeService.updateEmployee(id, employeeRequestDto);
     }
 
-    @DeleteMapping("/delete-employee/{id}")
+    @DeleteMapping("${api.admin.employee.delete}")
     public void deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
     }
 
-    @GetMapping("/search")
+    @GetMapping("${api.admin.search}")
     public Page<EmployeeResponseDto> searchEmployees(@RequestParam String keyword,
-                                                     @RequestParam(defaultValue = "0") int page,
-                                                     @RequestParam(defaultValue = "5") int size) {
+                                                     @RequestParam(defaultValue = "${pagination.default.page}") int page,
+                                                     @RequestParam(defaultValue = "${pagination.default.size}") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.searchEmployees(keyword, pageable);
     }
 
-    @GetMapping("/statistics")
+    @GetMapping("${api.admin.statistics}")
     public StatisticsResponseDto getStatistics() {
         return employeeService.getStatistics();
     }
 
-    @GetMapping("/by-department")
+    @GetMapping("${api.admin.sort.department}")
     public Page<EmployeeResponseDto> getEmployeesByDepartment(
             @RequestParam String departmentName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "${pagination.default.page}") int page,
+            @RequestParam(defaultValue = "${pagination.default.size}") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.findByDepartment(departmentName, pageable);
     }
 
-    @GetMapping("/by-age")
+    @GetMapping("${api.admin.sort.age}")
     public Page<EmployeeResponseDto> getEmployeesByAge(
             @RequestParam(required = false) Integer age,
             @RequestParam(required = false) Integer minAge,
             @RequestParam(required = false) Integer maxAge,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "${pagination.default.page}") int page,
+            @RequestParam(defaultValue = "${pagination.default.size}") int size) {
         Pageable pageable = PageRequest.of(page, size);
 
         if(age != null) {
