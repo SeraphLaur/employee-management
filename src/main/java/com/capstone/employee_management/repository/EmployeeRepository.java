@@ -20,6 +20,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     //display a list of employees based on their department
     Page<Employee> findByDepartment_NameIgnoreCase(String departmentName, Pageable pageable);
 
+    //for deleting a department associated with an employee
+    long countByDepartment(Department department);
+
     //for the searching of the name of employee
     @Query("SELECT e FROM Employee e WHERE " +
             "LOWER(e.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

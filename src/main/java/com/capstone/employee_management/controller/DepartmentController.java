@@ -10,6 +10,7 @@ import com.capstone.employee_management.service.DepartmentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("${api.admin.path}")
 public class DepartmentController {
-    private final DepartmentService  departmentService;
+    private final DepartmentService departmentService;
 
 
     public DepartmentController(DepartmentService departmentService) {
@@ -44,7 +45,10 @@ public class DepartmentController {
     }
 
     @DeleteMapping("${api.admin.department.delete}")
-    public void deleteDepartment(@PathVariable String name) {
-        departmentService.deleteDepartment(name);
+    public ResponseEntity<?> deleteDepartment(@PathVariable String name) {
+
+            departmentService.deleteDepartment(name);
+            return ResponseEntity.noContent().build();
+
     }
 }
