@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,13 +36,15 @@ class EmployeeManagementServiceTest {
     @Mock EmployeeRepository employeeRepository;
     @Mock DepartmentRepository departmentRepository;
     @Mock EmployeeMapper employeeMapper;
+    @Mock MessageSource messageSource;
 
     // Minimal concrete class to instantiate the abstract service and satisfy EmployeeService
     static class TestEmployeeService extends EmployeeManagementService {
         public TestEmployeeService(DepartmentRepository departmentRepository,
                                    EmployeeRepository employeeRepository,
-                                   EmployeeMapper employeeMapper) {
-            super(departmentRepository, employeeRepository, employeeMapper);
+                                   EmployeeMapper employeeMapper,
+                                   MessageSource messageSource) {
+            super(departmentRepository, employeeRepository, employeeMapper, messageSource);
         }
 
         // since employeeservices have other methods, other methods aren't used in this tests
@@ -69,7 +73,7 @@ class EmployeeManagementServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TestEmployeeService(departmentRepository, employeeRepository, employeeMapper);
+        service = new TestEmployeeService(departmentRepository, employeeRepository, employeeMapper, messageSource);
     }
 
     // helpers that matches my created DTOs
@@ -216,11 +220,14 @@ class EmployeeManagementServiceTest {
     void createEmployee_employeeIdAlreadyExists_throws() {
         var request = req("E999", "Frank", LocalDate.of(1992, 3, 3), "Ops", new BigDecimal("50000"));
         when(employeeRepository.existsByEmployeeIdIgnoreCase("E999")).thenReturn(true);
+        when(messageSource.getMessage(eq("employee.already.exists"), any(), any(Locale.class)))
+                .thenReturn("Employee already exists with id: E999");
 
         var ex = assertThrows(IllegalArgumentException.class, () -> service.createEmployee(request));
 
         assertTrue(ex.getMessage().contains("E999"));
         verify(employeeRepository).existsByEmployeeIdIgnoreCase("E999");
+        verify(messageSource).getMessage(eq("employee.already.exists"), any(), any(Locale.class));
         verifyNoMoreInteractions(employeeRepository);
         verifyNoInteractions(departmentRepository, employeeMapper);
     }
@@ -261,6 +268,8 @@ class EmployeeManagementServiceTest {
 
         when(employeeRepository.findById(100L)).thenReturn(Optional.of(existing));
         when(employeeRepository.existsByEmployeeIdIgnoreCase("E999")).thenReturn(true);
+        when(messageSource.getMessage(eq("employee.id.taken.or.same"), any(), any(Locale.class)))
+                .thenReturn("Employee ID already exists or same as previous ID");
 
         var ex = assertThrows(IllegalArgumentException.class, () -> service.updateEmployee(100L, request));
 
@@ -268,6 +277,7 @@ class EmployeeManagementServiceTest {
                 ex.getMessage().toLowerCase().contains("previous id"));
         verify(employeeRepository).findById(100L);
         verify(employeeRepository).existsByEmployeeIdIgnoreCase("E999");
+        verify(messageSource).getMessage(eq("employee.id.taken.or.same"), any(), any(Locale.class));
         verify(employeeRepository, never()).save(any());
     }
 
@@ -276,11 +286,14 @@ class EmployeeManagementServiceTest {
         var request = req("E100", "Grace", LocalDate.of(1988, 12, 12), "IT", new BigDecimal("120000"));
 
         when(employeeRepository.findById(999L)).thenReturn(Optional.empty());
+        when(messageSource.getMessage(eq("employee.not.found.id"), any(), any(Locale.class)))
+                .thenReturn("Employee not found with id: 999");
 
         var ex = assertThrows(EntityNotFoundException.class, () -> service.updateEmployee(999L, request));
 
         assertTrue(ex.getMessage().contains("999"));
         verify(employeeRepository).findById(999L);
+        verify(messageSource).getMessage(eq("employee.not.found.id"), any(), any(Locale.class));
         verify(employeeRepository, never()).save(any());
     }
 
@@ -297,10 +310,13 @@ class EmployeeManagementServiceTest {
     @Test
     void deleteEmployee_notFound_throws() {
         when(employeeRepository.existsById(124L)).thenReturn(false);
+        when(messageSource.getMessage(eq("employee.not.found.id"), any(), any(Locale.class)))
+                .thenReturn("Employee not found with id: 124");
 
         assertThrows(EntityNotFoundException.class, () -> service.deleteEmployee(124L));
 
         verify(employeeRepository).existsById(124L);
+        verify(messageSource).getMessage(eq("employee.not.found.id"), any(), any(Locale.class));
         verify(employeeRepository, never()).deleteById(anyLong());
     }
 }
